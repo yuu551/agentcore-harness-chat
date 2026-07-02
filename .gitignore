@@ -1,0 +1,22 @@
+# amplify
+node_modules
+.amplify
+amplify_outputs*
+amplifyconfiguration*
+
+# build
+dist
+
+# env
+.env
+.env.*
+.mise.local.toml
+
+# misc
+*.log
+
+# package managers
+pnpm-lock.yaml
+
+# OS
+.DS_Store

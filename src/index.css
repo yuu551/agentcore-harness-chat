@@ -1,0 +1,421 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* ============================================================
+   テーマ: Copper & Ink
+   - 温かみのある紙色/墨色のニュートラル + 銅（copper）アクセント
+   - 見出し: Fraunces（セリフ） / 本文: IBM Plex Sans JP / 等幅: IBM Plex Mono
+   ============================================================ */
+
+/* inline: utility が変数を使用箇所で解決するようにする（:root で解決されると
+   ログイン画面のライト固定などスコープ単位のテーマ切替が効かなくなる） */
+@theme inline {
+  --color-canvas: var(--canvas);
+  --color-card: var(--card);
+  --color-card-strong: var(--card-strong);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-ink: var(--ink);
+  --color-ink-soft: var(--ink-soft);
+  --color-ink-faint: var(--ink-faint);
+  --color-copper: var(--copper);
+  --color-copper-strong: var(--copper-strong);
+  --color-copper-soft: var(--copper-soft);
+
+  --font-display: "Fraunces", "IBM Plex Sans JP", serif;
+  --font-body: "IBM Plex Sans JP", "Hiragino Sans", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+}
+
+/* ログイン画面（[data-amplify-authenticator]）はダークテーマでもライト固定にする。
+   この要素は未認証時にしか存在しないため、ログイン後のテーマには影響しない */
+:root,
+.light,
+[data-amplify-authenticator] {
+  --canvas: #f5f2ec;
+  --card: #fdfcfa;
+  --card-strong: #ffffff;
+  --line: #e5dfd3;
+  --line-strong: #d3cbbb;
+  --ink: #201b16;
+  --ink-soft: #5d554a;
+  --ink-faint: #988e7f;
+  --copper: #a8501c;
+  --copper-strong: #7e3a12;
+  --copper-soft: rgba(168, 80, 28, 0.1);
+  --ring: rgba(168, 80, 28, 0.3);
+  --shadow-subtle: 0 1px 2px rgba(32, 27, 22, 0.06);
+  --shadow-card: 0 10px 30px rgba(32, 27, 22, 0.07), 0 1px 2px rgba(32, 27, 22, 0.06);
+  color-scheme: light;
+}
+
+.dark {
+  --canvas: #12100d;
+  --card: #1a1713;
+  --card-strong: #221e19;
+  --line: #2f2a22;
+  --line-strong: #423a2f;
+  --ink: #f1ebe2;
+  --ink-soft: #b7ac9c;
+  --ink-faint: #7e7466;
+  --copper: #e09659;
+  --copper-strong: #c87a3d;
+  --copper-soft: rgba(224, 150, 89, 0.14);
+  --ring: rgba(224, 150, 89, 0.28);
+  --shadow-subtle: 0 1px 2px rgba(0, 0, 0, 0.35);
+  --shadow-card: 0 18px 50px rgba(0, 0, 0, 0.28), 0 1px 2px rgba(0, 0, 0, 0.28);
+  color-scheme: dark;
+}
+
+body {
+  font-family: var(--font-body);
+  background: var(--canvas);
+  color: var(--ink);
+  margin: 0;
+  min-width: 320px;
+}
+
+button,
+textarea {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: not-allowed;
+}
+
+::selection {
+  background: var(--copper-soft);
+  color: var(--ink);
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--line-strong);
+  border-radius: 3px;
+}
+
+/* --- アニメーション（高影響度の瞬間のみ） --- */
+
+.fade-up {
+  animation: fade-up 420ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ストリーミング中のカーソル */
+.stream-caret::after {
+  content: "";
+  display: inline-block;
+  width: 2px;
+  height: 1em;
+  margin-left: 2px;
+  vertical-align: text-bottom;
+  background: var(--copper);
+  animation: caret-blink 1s steps(2, start) infinite;
+}
+
+@keyframes caret-blink {
+  to {
+    visibility: hidden;
+  }
+}
+
+/* 応答待ちのドット */
+.thinking-dot {
+  animation: thinking 1.2s ease-in-out infinite;
+}
+.thinking-dot:nth-child(2) {
+  animation-delay: 0.15s;
+}
+.thinking-dot:nth-child(3) {
+  animation-delay: 0.3s;
+}
+
+@keyframes thinking {
+  0%,
+  60%,
+  100% {
+    opacity: 0.25;
+    transform: translateY(0);
+  }
+  30% {
+    opacity: 1;
+    transform: translateY(-3px);
+  }
+}
+
+/* --- Markdown（Streamdown）内のテーブル --- */
+
+table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  margin: 0.75rem 0;
+  font-size: 0.8125rem;
+  line-height: 1.6;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+thead {
+  background: var(--copper-soft);
+}
+
+th {
+  padding: 0.55rem 0.875rem;
+  text-align: left;
+  font-weight: 600;
+  font-size: 0.75rem;
+  letter-spacing: 0.02em;
+  color: var(--ink);
+  border-bottom: 1px solid var(--line);
+}
+
+td {
+  padding: 0.5rem 0.875rem;
+  border-bottom: 1px solid var(--line);
+  color: var(--ink-soft);
+}
+
+td:first-child {
+  color: var(--ink);
+}
+
+tbody tr:last-child td {
+  border-bottom: none;
+}
+
+/* テーブルラッパー: streamdown 側の未定義カラー変数（border-border / bg-sidebar）を
+   打ち消し、コードブロックと同じ「スリムなヘッダーバー + 本体」の構成に揃える */
+[data-streamdown="table-wrapper"] {
+  margin: 1rem 0;
+  padding: 0;
+  gap: 0;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--card-strong);
+  overflow: hidden;
+}
+
+/* アクション行（コピー / ダウンロード / 全画面） */
+[data-streamdown="table-wrapper"] > div:first-child {
+  min-height: 2rem;
+  padding: 0.2rem 0.4rem;
+  border-bottom: 1px solid var(--line);
+}
+
+[data-streamdown="table-wrapper"] > div:last-child {
+  overflow-x: auto;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+}
+
+[data-streamdown="table-wrapper"] table {
+  margin: 0;
+  border: none;
+  border-radius: 0;
+}
+
+[data-streamdown="table-wrapper"] button,
+[data-streamdown="table-fullscreen"] button {
+  display: grid;
+  place-items: center;
+  padding: 0.35rem;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--ink-faint);
+  transition: all 150ms;
+}
+
+[data-streamdown="table-wrapper"] button:hover,
+[data-streamdown="table-fullscreen"] button:hover {
+  background: var(--copper-soft);
+  color: var(--ink);
+}
+
+/* テーブルの全画面表示 */
+[data-streamdown="table-fullscreen"] {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  background: var(--canvas);
+  padding: 1rem;
+}
+
+[data-streamdown="table-fullscreen"] > div:first-child {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.25rem;
+  padding-bottom: 0.5rem;
+  margin-bottom: 0.75rem;
+  border-bottom: 1px solid var(--line);
+}
+
+[data-streamdown="table-fullscreen"] > div:last-child {
+  flex: 1;
+  overflow: auto;
+}
+
+/* --- Markdown（Streamdown）内のコードブロック --- */
+
+[data-streamdown="code-block"] {
+  position: relative;
+  margin: 1rem 0;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--card-strong);
+}
+
+[data-streamdown="code-block-header"] {
+  display: flex;
+  align-items: center;
+  min-height: 2rem;
+  padding: 0.3rem 0.875rem;
+  border-bottom: 1px solid var(--line);
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  color: var(--ink-faint);
+}
+
+/* actions は header の外の匿名ラッパー（sticky -mt-10）に入っているため、
+   ヘッダー行の右端に固定し直す */
+[data-streamdown="code-block"] > div:has(> [data-streamdown="code-block-actions"]) {
+  position: absolute;
+  top: 0;
+  right: 0.4rem;
+  height: 2rem;
+  margin: 0;
+}
+
+[data-streamdown="code-block-actions"] {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  border: none;
+  background: transparent;
+  box-shadow: none;
+}
+
+[data-streamdown="code-block-actions"] button {
+  display: grid;
+  place-items: center;
+  padding: 0.35rem;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--ink-faint);
+  transition: all 150ms;
+}
+
+[data-streamdown="code-block-actions"] button:hover {
+  background: var(--copper-soft);
+  color: var(--ink);
+}
+
+[data-streamdown="code-block-body"] {
+  overflow-x: auto;
+  border: none;
+  border-radius: 0;
+}
+
+[data-streamdown="code-block-body"] pre {
+  margin: 0;
+  padding: 0.875rem 1rem;
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  line-height: 1.7;
+  border: none;
+  border-radius: 0;
+}
+
+/* 行番号などの擬似要素はテーマと噛み合わないため無効化する */
+[data-streamdown="code-block-body"] :is(pre, code, code > span)::before,
+[data-streamdown="code-block-body"] :is(pre, code, code > span)::after {
+  content: none;
+}
+
+/* インラインコード用の装飾（bg-copper-soft 等）をコードブロック内では打ち消す */
+[data-streamdown="code-block-body"] code {
+  background: transparent;
+  padding: 0;
+  border-radius: 0;
+}
+
+/* --- Amplify Authenticator をテーマに合わせる --- */
+
+[data-amplify-authenticator] {
+  display: grid;
+  place-items: center;
+  align-content: center;
+  min-height: 100dvh;
+  padding: 2rem 1rem;
+  background: var(--canvas);
+  color: var(--ink);
+  --amplify-fonts-default-variable: var(--font-body);
+  --amplify-fonts-default-static: var(--font-body);
+  --amplify-components-authenticator-router-background-color: var(--card);
+  --amplify-components-authenticator-router-border-color: var(--line);
+  --amplify-components-authenticator-router-box-shadow: var(--shadow-card);
+  --amplify-components-button-primary-background-color: var(--copper);
+  --amplify-components-button-primary-hover-background-color: var(--copper-strong);
+  --amplify-components-button-primary-active-background-color: var(--copper-strong);
+  --amplify-components-button-primary-focus-background-color: var(--copper-strong);
+  --amplify-components-button-link-color: var(--copper);
+  --amplify-components-button-link-hover-color: var(--copper-strong);
+  --amplify-components-button-link-hover-background-color: var(--copper-soft);
+  --amplify-components-fieldcontrol-focus-border-color: var(--copper);
+  --amplify-components-fieldcontrol-focus-box-shadow: 0 0 0 2px var(--ring);
+  --amplify-components-tabs-item-active-color: var(--copper);
+  --amplify-components-tabs-item-active-border-color: var(--copper);
+  --amplify-components-tabs-item-hover-color: var(--copper-strong);
+  /* 注意: Amplify UI のトークンは :root で var() チェーンとして解決済みのため、
+     ベース色（--amplify-colors-*）の上書きは効かない。コンポーネントレベルの
+     トークンを直接上書きする。.amplify-input はさらに input-* トークンへ
+     ローカル再定義するため、input-* 側を指定する必要がある */
+  --amplify-components-field-label-color: var(--ink-soft);
+  --amplify-components-input-color: var(--ink);
+  --amplify-components-input-border-color: var(--line-strong);
+  --amplify-components-input-focus-border-color: var(--copper);
+  --amplify-components-button-color: var(--ink);
+  --amplify-components-button-border-color: var(--line-strong);
+  --amplify-components-button-hover-color: var(--ink);
+  --amplify-components-button-hover-background-color: var(--copper-soft);
+  --amplify-components-button-hover-border-color: var(--line-strong);
+  --amplify-components-button-active-color: var(--ink);
+  --amplify-components-button-active-background-color: var(--copper-soft);
+  --amplify-components-button-focus-color: var(--ink);
+  --amplify-components-button-focus-box-shadow: 0 0 0 2px var(--ring);
+  --amplify-components-divider-border-color: var(--line);
+  --amplify-components-divider-label-color: var(--ink-faint);
+  --amplify-components-divider-label-background-color: var(--card);
+  --amplify-components-passwordfield-button-color: var(--ink-soft);
+}

@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AgentCore Harness Chat</title>
+    <script>
+      (() => {
+        try {
+          const param = new URLSearchParams(location.search).get("theme");
+          const stored = localStorage.getItem("theme");
+          const theme =
+            param === "light" || param === "dark"
+              ? param
+              : stored === "light" || stored === "dark"
+                ? stored
+                : window.matchMedia("(prefers-color-scheme: dark)").matches
+                  ? "dark"
+                  : "light";
+          const root = document.documentElement;
+          root.classList.add(theme);
+          root.style.colorScheme = theme;
+          root.style.backgroundColor = theme === "dark" ? "#12100d" : "#f5f2ec";
+        } catch {
+          document.documentElement.classList.add("light");
+          document.documentElement.style.colorScheme = "light";
+          document.documentElement.style.backgroundColor = "#f5f2ec";
+        }
+      })();
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=IBM+Plex+Sans+JP:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
