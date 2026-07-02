@@ -1,6 +1,20 @@
 # Google SSO の設定
 
-Cognito User Pool のフェデレーション機能で Google アカウントによるサインインを有効にします。ログイン画面に「Sign In with Google」ボタンが追加され、既存のメール + パスワードログインと共存できます（パスワードログインを無効化する場合は末尾の [SSO 専用モード](#sso-専用モード) を参照）。
+Cognito User Pool のフェデレーション機能で Google アカウントによるサインインを有効にします。ログイン画面に「Google でサインイン」ボタンが追加され、既存のメール + パスワードログインと共存できます（パスワードログインを無効化する場合は末尾の [SSO 専用モード](#sso-専用モード) を参照）。
+
+サインインの流れは次のとおりです。Google に登録するリダイレクト URI がアプリの URL ではなく **Cognito ドメイン**なのは、アプリと Google の間に Cognito が OIDC プロキシとして挟まるためです。
+
+```mermaid
+sequenceDiagram
+    participant B as ブラウザ (アプリ)
+    participant C as Cognito
+    participant G as Google
+    B->>C: サインイン開始
+    C->>G: 認可リクエスト
+    G->>G: Google アカウントで認証
+    G-->>C: Cognito ドメインの /oauth2/idpresponse へリダイレクト
+    C-->>B: トークンを発行してアプリ (APP_ORIGINS) へ戻る
+```
 
 ## 手順
 
@@ -35,7 +49,7 @@ GOOGLE_AUTH=true HARNESS_ARN=arn:... npx ampx sandbox --once
 
 ### 4. 動作確認
 
-`npm run dev` でログイン画面を開き、「Sign In with Google」からサインインできることを確認します。サインインしたユーザーは User Pool に外部プロバイダー連携ユーザーとして作成されます。
+`npm run dev` でログイン画面を開き、「Google でサインイン」からサインインできることを確認します。サインインしたユーザーは User Pool に外部プロバイダー連携ユーザーとして作成されます。
 
 ## SSO 専用モード
 

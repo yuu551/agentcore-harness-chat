@@ -1,6 +1,20 @@
 # Microsoft Entra ID SSO の設定
 
-Cognito User Pool の OIDC フェデレーションで Microsoft Entra ID（旧 Azure AD）によるサインインを有効にします。ログイン画面の下部に「Microsoft でサインイン」ボタンが追加され、既存のメール + パスワードログインと共存できます（パスワードログインを無効化する場合は末尾の [SSO 専用モード](#sso-専用モード) を参照）。
+Cognito User Pool の OIDC フェデレーションで Microsoft Entra ID（旧 Azure AD）によるサインインを有効にします。ログイン画面に「Microsoft でサインイン」ボタンが追加され、既存のメール + パスワードログインと共存できます（パスワードログインを無効化する場合は末尾の [SSO 専用モード](#sso-専用モード) を参照）。
+
+サインインの流れは次のとおりです。Entra ID に登録するリダイレクト URI がアプリの URL ではなく **Cognito ドメイン**なのは、アプリと Entra ID の間に Cognito が OIDC プロキシとして挟まるためです。
+
+```mermaid
+sequenceDiagram
+    participant B as ブラウザ (アプリ)
+    participant C as Cognito
+    participant E as Entra ID
+    B->>C: サインイン開始
+    C->>E: 認可リクエスト
+    E->>E: Microsoft アカウントで認証
+    E-->>C: Cognito ドメインの /oauth2/idpresponse へリダイレクト<br/>(ID トークンに email クレームが必要)
+    C-->>B: トークンを発行してアプリ (APP_ORIGINS) へ戻る
+```
 
 ## 手順
 
