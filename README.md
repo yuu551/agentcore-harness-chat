@@ -85,7 +85,7 @@ Harness 本体は AWS コンソールで作成し、ARN を環境変数で渡し
 
 ### 1. Harness を作成する
 
-AWS コンソールで Harness を作成し、ARN を取得します。手順は [docs/setup-harness.md](docs/setup-harness.md) を参照してください。
+AWS コンソールで Harness を作成し、ARN を取得します。手順は [docs/Harnessのセットアップ.md](docs/Harnessのセットアップ.md) を参照してください。
 
 ### 2. デプロイする
 
@@ -127,10 +127,10 @@ npm run dev
 | 管理ユーザー作成 | `ADMIN_USER_EMAIL=admin@example.com` | デプロイ時にユーザーを作成し、仮パスワードをメール送付。セルフサインアップ無効時の初回ログイン手段 |
 | セルフサインアップ | `SELF_SIGNUP=true` | デフォルトは無効（管理者によるユーザー作成のみ） |
 | メールドメイン制限 | `ALLOWED_EMAIL_DOMAINS=example.com,example.co.jp` | セルフサインアップ時のみ有効 |
-| Google SSO | `GOOGLE_AUTH=true` | 手順: [docs/sso-google.md](docs/sso-google.md) |
-| Entra ID SSO | `ENTRA_AUTH=true` `ENTRA_TENANT_ID=<tenant-id>` | 手順: [docs/sso-entra-id.md](docs/sso-entra-id.md) |
+| Google SSO | `GOOGLE_AUTH=true` | 手順: [docs/Google_SSOの設定.md](docs/Google_SSOの設定.md) |
+| Entra ID SSO | `ENTRA_AUTH=true` `ENTRA_TENANT_ID=<tenant-id>` | 手順: [docs/EntraID_SSOの設定.md](docs/EntraID_SSOの設定.md) |
 | SSO 専用モード | `SSO_ONLY=true` | パスワードログインを無効化。`GOOGLE_AUTH` または `ENTRA_AUTH` が必要 |
-| WAF IP 制限 | `ALLOWED_IPV4_CIDRS=203.0.113.0/24` | 手順: [docs/waf.md](docs/waf.md)。未指定なら WAF を作成しない |
+| WAF IP 制限 | `ALLOWED_IPV4_CIDRS=203.0.113.0/24` | 手順: [docs/WAFによるIP制限.md](docs/WAFによるIP制限.md)。未指定なら WAF を作成しない |
 | CORS 許可オリジン | `APP_ORIGINS=http://localhost:5173,https://example.com` | デフォルトは `http://localhost:5173` |
 
 ## モデルセレクタの仕組み
@@ -154,7 +154,7 @@ npm run dev
 
 ### `HARNESS_ARN が設定されていません` で synth が失敗する
 
-環境変数 `HARNESS_ARN` を設定して再実行してください。Harness の作成手順は [docs/setup-harness.md](docs/setup-harness.md) を参照してください。
+環境変数 `HARNESS_ARN` を設定して再実行してください。Harness の作成手順は [docs/Harnessのセットアップ.md](docs/Harnessのセットアップ.md) を参照してください。
 
 ### ブラウザで CORS エラーになる
 
@@ -162,7 +162,7 @@ npm run dev
 
 ### `Failed to retrieve backend secret` でデプロイが失敗する
 
-SSO フラグを有効にしたのに secret が未設定です。`npx ampx sandbox secret set GOOGLE_CLIENT_ID` などで設定してください（[docs/sso-google.md](docs/sso-google.md) / [docs/sso-entra-id.md](docs/sso-entra-id.md)）。
+SSO フラグを有効にしたのに secret が未設定です。`npx ampx sandbox secret set GOOGLE_CLIENT_ID` などで設定してください（[docs/Google_SSOの設定.md](docs/Google_SSOの設定.md) / [docs/EntraID_SSOの設定.md](docs/EntraID_SSOの設定.md)）。
 
 ### モデルエラー（`on-demand throughput isn't supported`）
 
@@ -176,7 +176,7 @@ Lambda プロキシがモデル ID にリージョンプレフィックスを自
 
 ### SSO でログインできない
 
-[docs/sso-google.md](docs/sso-google.md) / [docs/sso-entra-id.md](docs/sso-entra-id.md) 末尾のトラブルシューティングを参照してください。Entra ID は ID トークンの email クレーム設定が漏れがちです。
+[docs/Google_SSOの設定.md](docs/Google_SSOの設定.md) / [docs/EntraID_SSOの設定.md](docs/EntraID_SSOの設定.md) 末尾のトラブルシューティングを参照してください。Entra ID は ID トークンの email クレーム設定が漏れがちです。
 
 ## デザインプレビュー（バックエンド不要）
 
