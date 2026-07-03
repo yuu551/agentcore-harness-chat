@@ -123,11 +123,49 @@ npm run dev
 
 ## 本番デプロイ（Amplify Hosting）
 
-1. このリポジトリを自分の GitHub リポジトリへ push します
-2. [Amplify コンソール](https://console.aws.amazon.com/amplify/)で「新しいアプリ」→ GitHub を接続し、ブランチを選択します（Gen 2 プロジェクトとして自動検出されます。バックエンドのデプロイに使うサービスロールの作成を求められたら作成してください）
-3. アプリの「環境変数」に `HARNESS_ARN` などのパラメータを設定します
-4. SSO を使う場合は「Secrets」に `GOOGLE_CLIENT_ID` などのシークレットを設定します
-5. 初回デプロイ後に発行される URL（`https://main.xxxxxxxx.amplifyapp.com`）を `APP_ORIGINS` に追加して再デプロイします（CORS と Cognito コールバック URL に反映されます）
+sandbox とは別に、Git 連携による本番環境を作る手順です。リージョンは Harness に合わせます（例: `us-east-1`）。
+
+### 1. リポジトリを用意する
+
+このリポジトリを fork するか、自分の GitHub リポジトリへ push します。
+
+### 2. Amplify アプリを作成する
+
+1. [Amplify コンソール](https://console.aws.amazon.com/amplify/)で「新しいアプリを作成」→「GitHub」を選択します
+2. GitHub の認可画面で、対象リポジトリへのアクセスを許可します
+3. リポジトリとブランチ（例: `main`）を選択します。Amplify Gen 2 プロジェクトとして自動検出され、ビルド設定は自動生成されます
+4. バックエンドのデプロイに使う**サービスロール**の作成を求められたら、案内に従って作成します
+
+### 3. 環境変数を設定する（初回デプロイ前に）
+
+アプリ設定 →「環境変数」に設定します。**`HARNESS_ARN` を設定しないままビルドすると synth エラーで失敗する**ので、初回デプロイの開始前に設定してください。
+
+| キー | 必須 | 値 |
+|---|---|---|
+| `HARNESS_ARN` | ✅ | Harness の ARN |
+| `ADMIN_USER_EMAIL` | 推奨 | 最初のログインユーザー（仮パスワードがメールで届く） |
+| その他 | 任意 | [オプション機能](#オプション機能)の各環境変数 |
+
+SSO を使う場合は、アプリ設定 →「シークレット」に `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET`（Entra ID なら `ENTRA_CLIENT_ID` / `ENTRA_CLIENT_SECRET`）も設定します。
+
+> sandbox の `ampx sandbox secret set` とは別管理です。本番用にここで改めて設定してください。
+
+### 4. 初回デプロイ → APP_ORIGINS を反映する
+
+アプリの URL は初回デプロイ後に発行されるため、2 段階になります。
+
+1. 初回デプロイの完了後、発行された URL（`https://main.xxxxxxxx.amplifyapp.com`）を確認します
+2. 環境変数 `APP_ORIGINS` にその URL を設定し、**再デプロイ**します（最新ビルドの「このバージョンを再デプロイ」で OK）
+
+これで CORS 許可と Cognito のコールバック URL に本番 URL が反映されます。**この手順を飛ばすと、画面は開けてもチャット送信が CORS エラーになります。**
+
+### 5. SSO のリダイレクト URI を登録する（SSO を使う場合のみ）
+
+本番は sandbox とは**別の Cognito User Pool・別ドメイン**が作られます。Cognito コンソールで本番 User Pool のドメイン（`xxxxxxxx.auth.<region>.amazoncognito.com`）を確認し、Google / Entra ID 側に `https://<本番ドメイン>/oauth2/idpresponse` を**追加**登録してください。sandbox 用に登録した URI は残したままで共存できます。
+
+### 6. 動作確認
+
+発行された URL を開き、`ADMIN_USER_EMAIL` に届いた仮パスワードでログイン（初回にパスワード変更）してチャットを送信します。以後、`main` ブランチへの push で自動的に再デプロイされます（フルスタックビルドのため 10 分前後かかります）。
 
 ## オプション機能
 
