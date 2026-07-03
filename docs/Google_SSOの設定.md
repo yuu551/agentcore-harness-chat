@@ -51,6 +51,16 @@ GOOGLE_AUTH=true HARNESS_ARN=arn:... npx ampx sandbox --once
 
 `npm run dev` でログイン画面を開き、「Google でサインイン」からサインインできることを確認します。サインインしたユーザーは User Pool に外部プロバイダー連携ユーザーとして作成されます。
 
+## サインインできるアカウントを制限する（推奨）
+
+Cognito のフェデレーションは初回サインイン時にユーザーを自動作成するため、既定では**任意の Google アカウント**でサインインできます。組織内に限定するには、メールドメイン制限を併せて設定してください。
+
+```bash
+ALLOWED_EMAIL_DOMAINS=example.com GOOGLE_AUTH=true HARNESS_ARN=arn:... npx ampx sandbox --once
+```
+
+この制限は SSO の初回サインイン（ユーザー自動作成）にも適用され、許可ドメイン以外のアカウントはサインインに失敗します。なお、制限を追加する前に作成済みのユーザーは削除されないため、必要に応じて Cognito コンソールから手動で削除してください。
+
 ## SSO 専用モード
 
 `SSO_ONLY=true` を付けてデプロイすると、Cognito のパスワードログインが無効になり、アプリにアクセスすると自動で Google のサインイン画面へリダイレクトされます。
