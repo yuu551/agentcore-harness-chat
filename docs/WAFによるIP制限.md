@@ -12,11 +12,15 @@ ALLOWED_IPV6_CIDRS=2001:db8::/32 \
 HARNESS_ARN=arn:... npx ampx sandbox --once
 ```
 
+マスクなしの単一 IP（例: `203.0.113.10`）を指定した場合は、自動で `/32`（IPv6 は `/128`）を補完します。
+
 自分のグローバル IP は次のコマンドで確認できます。
 
 ```bash
 curl https://checkip.amazonaws.com
 ```
+
+> **注意**: iCloud Private Relay や VPN を経由していると、ブラウザの外向き IP が上記コマンドの結果と異なる・接続のたびに変わることがあります。許可したはずの IP で弾かれる場合は、ブラウザ側の IP 確認サイトの結果と見比べてください。
 
 ## 作成されるリソースと動作
 
@@ -28,20 +32,25 @@ curl https://checkip.amazonaws.com
 
 許可 CIDR 外からアクセスすると、Cognito の認証エンドポイント（サインイン・トークン発行・サインアップなど）への通信がブロックされ、ログインできなくなります。ブロック状況は CloudWatch メトリクス（`harness-chat_cognito_waf`）で確認できます。
 
-## 保護範囲の注意点
+## 保護範囲（この機能を有効にしたときの状態）
 
-- この WAF が保護するのは **Cognito User Pool** です。チャット API（API Gateway）と画面配信（Amplify Hosting / ローカル開発サーバー）は対象外です
-- ただしチャット API は Cognito の JWT がないと呼び出せないため、「許可 IP 外からはログインできない = API も実質使えない」という守り方になります
-- **発行済みのトークンは有効期限まで利用できます**。許可 IP 内でログインした後にネットワークを移動した場合、トークン失効までは API を呼び出せる点に留意してください
+| 対象 | 許可 IP 外からのアクセス |
+|---|---|
+| ログイン画面（Amplify Hosting の配信） | **見える**（この WAF の対象外） |
+| ログイン操作（パスワード / SSO、Cognito への通信） | **ブロックされる**（403） |
+| チャット API（API Gateway `/invoke`） | WAF 対象外だが、Cognito の JWT がないと呼び出せない |
+| ログイン済みユーザーの継続利用 | **トークン失効（既定 1 時間）までは利用できる**。失効後はトークン更新も Cognito 経由のためブロックされる |
+
+つまり「画面は見えるがログインできない = 実害のある操作はすべて認証の内側」という守り方です。静的アセットに秘密情報は含まれないため（User Pool ID や API URL は公開前提の設定値）、多くの社内利用ではこの構成で十分です。
 
 ## Amplify Hosting にも IP 制限をかける（オプション）
 
-画面配信そのものも許可 IP 外から見せたくない場合は、Amplify Hosting の Firewall（WAF 統合）をコンソールから設定します。Hosting アプリはこのテンプレートの IaC 管理外のため、コンソールでの設定になります。
+「許可 IP 外からはログイン画面の存在すら見せない」ことが要件になる場合（顧客のコンプライアンス要件など）は、Amplify Hosting の Firewall（WAF 統合）を追加します。Hosting アプリはこのテンプレートの IaC 管理外のため、コンソールでの設定になります。
 
 1. Amplify コンソールで対象アプリを開き、「Firewall」を選択
 2. 「IP address restriction」で許可する CIDR を登録して保存
 
-> Amplify Hosting の Firewall は CloudFront スコープの WAF が別途作成されるため、WAF の固定費がもう 1 セット発生します。
+> Amplify Hosting の Firewall は CloudFront スコープの WAF が別途作成されるため、WAF の固定費がもう 1 セット発生し、許可リストの管理も二重になります。前節のとおり実害のある操作は認証の内側にあるため、明確な要件がなければ Cognito 側の WAF だけで運用を始めるのがおすすめです。
 
 ## コスト
 
