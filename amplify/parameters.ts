@@ -29,8 +29,13 @@ export const parameters = {
   ),
 
   // WAF による IP 制限（未指定なら WAF を作成しない）
-  allowedIpV4Cidrs: csv(process.env.ALLOWED_IPV4_CIDRS),
-  allowedIpV6Cidrs: csv(process.env.ALLOWED_IPV6_CIDRS),
+  // WAF の IPSet は CIDR 表記が必須のため、マスクなしの単一 IP は自動補完する
+  allowedIpV4Cidrs: csv(process.env.ALLOWED_IPV4_CIDRS).map((c) =>
+    c.includes("/") ? c : `${c}/32`
+  ),
+  allowedIpV6Cidrs: csv(process.env.ALLOWED_IPV6_CIDRS).map((c) =>
+    c.includes("/") ? c : `${c}/128`
+  ),
 
   // セルフサインアップ（デフォルト無効 = 管理者によるユーザー作成のみ）
   selfSignUp: flag(process.env.SELF_SIGNUP),
