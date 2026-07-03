@@ -1,7 +1,32 @@
+import { useEffect, useState } from "react";
 import { useAuthenticator } from "@aws-amplify/ui-react";
+import { fetchAuthSession } from "aws-amplify/auth";
 import { LogOut, Moon, SquarePen, Sun, Waypoints } from "lucide-react";
 import { useTheme } from "../hooks/useTheme";
 import { ModelSelector } from "./ModelSelector";
+
+// SSO（フェデレーション）ユーザーは signInDetails.loginId が入らないため、
+// どのログイン方式でも共通して入る ID トークンの email クレームから取得する
+function useUserEmail(username: string | undefined) {
+  const [email, setEmail] = useState("");
+
+  useEffect(() => {
+    let cancelled = false;
+    fetchAuthSession()
+      .then((session) => {
+        const claim = session.tokens?.idToken?.payload?.email;
+        if (!cancelled && typeof claim === "string") setEmail(claim);
+      })
+      .catch(() => {
+        // 表示専用のため失敗時は空のまま
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [username]);
+
+  return email;
+}
 
 export function Header({
   modelId,
@@ -16,6 +41,7 @@ export function Header({
 }) {
   const { user, signOut } = useAuthenticator((context) => [context.user]);
   const { theme, toggle } = useTheme();
+  const email = useUserEmail(user?.username);
 
   return (
     <header className="sticky top-0 z-10 border-b border-line bg-canvas/85 backdrop-blur">
@@ -55,7 +81,7 @@ export function Header({
 
           <div className="ml-1 hidden items-center gap-2 border-l border-line pl-3 md:flex">
             <span className="max-w-40 truncate text-xs text-ink-faint">
-              {user?.signInDetails?.loginId ?? ""}
+              {email || (user?.signInDetails?.loginId ?? "")}
             </span>
           </div>
 
