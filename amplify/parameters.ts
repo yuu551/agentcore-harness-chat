@@ -19,7 +19,10 @@ export const parameters = {
   harnessArn: process.env.HARNESS_ARN ?? "",
 
   // フロントエンドのオリジン（CORS 許可と Cognito コールバック URL に使用、カンマ区切り）
-  appOrigins: csv(process.env.APP_ORIGINS ?? "http://localhost:5173"),
+  // Origin ヘッダは末尾スラッシュを含まないため、指定ミスを吸収するよう正規化する
+  appOrigins: csv(process.env.APP_ORIGINS ?? "http://localhost:5173").map(
+    (o) => o.replace(/\/+$/, "")
+  ),
 
   // WAF による IP 制限（未指定なら WAF を作成しない）
   allowedIpV4Cidrs: csv(process.env.ALLOWED_IPV4_CIDRS),
