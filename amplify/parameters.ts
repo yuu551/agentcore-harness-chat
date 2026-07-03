@@ -4,6 +4,10 @@
 // 本番デプロイ:   Amplify Hosting のブランチ環境変数に同じキーを設定
 // シークレット:   Google/Entra ID の client_id / client_secret は環境変数ではなく
 //                `npx ampx sandbox secret set <NAME>`（ampx secret）で管理する
+//
+// 自分の環境専用にデプロイする場合は、環境変数の代わりにこのファイルの値を
+// 直接書き換えても構いません（例: selfSignUp: true）。ARN やテナント ID など
+// アカウント固有の情報を書いたままパブリックリポジトリへコミットしないこと
 
 const csv = (value: string | undefined): string[] =>
   (value ?? "")
