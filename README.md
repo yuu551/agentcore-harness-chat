@@ -1,104 +1,106 @@
 # AgentCore Harness Chat
 
-Amazon Bedrock AgentCore Harness を社内・チーム向けに安全に公開するためのチャット Web アプリテンプレートです。Amplify Gen 2 ベースで、Harness 単体では実現しにくい非機能要件（SSO・IP 制限・サインアップ制御）をかぶせて配布できます。
+English | [日本語](README.ja.md)
 
-![チャット画面（ライトテーマ）](docs/screenshot-chat-light.png)
+A chat web app template for safely sharing Amazon Bedrock AgentCore Harness agents with your team or organization. Built on Amplify Gen 2, it layers the non-functional requirements that Harness alone does not cover (SSO, IP restriction, sign-up control) on top of your agent.
+
+![Chat screen (light theme)](docs/screenshot-chat-light.png)
 
 <details>
-<summary>ダークテーマ / ログイン画面</summary>
+<summary>Dark theme / Login screen</summary>
 
-![チャット画面（ダークテーマ）](docs/screenshot-chat-dark.png)
-![ログイン画面](docs/screenshot-login.png)
+![Chat screen (dark theme)](docs/screenshot-chat-dark.png)
+![Login screen](docs/screenshot-login.png)
 
 </details>
 
-## いつ使うか
+## When to use this
 
-AgentCore Harness を使うと、コンソール上で model / system prompt / tools を設定するだけでエージェントを作れます。ただし、そのエージェントを**使う側にも AWS マネジメントコンソールへのサインインが必要**です。「コンソールで試したエージェントが良かったので、そのままチームに配りたい」となったとき、利用者全員に IAM ユーザーやコンソールアクセスを払い出すのは避けたいところです。
+With AgentCore Harness, you can build an agent just by configuring model / system prompt / tools in the console. However, **users of that agent also need to sign in to the AWS Management Console**. When you think "this agent I tried in the console is great — let's share it with the team", you probably don't want to issue IAM users or console access to every single user.
 
-このテンプレートは Harness の前段に Cognito 認証付きの Web チャットを置くことで、この問題を解決します。
+This template solves that by placing a Cognito-authenticated web chat in front of the Harness.
 
-- コンソールで作った Harness エージェントを、**AWS アカウントを持たないメンバー**にブラウザだけで使ってもらえる
-- 利用者ごとの IAM ユーザー払い出しが不要（AWS への権限は Lambda の IAM ロール 1 つに集約され、利用者は Cognito のユーザーとして管理）
-- 社内配布の前提になる非機能をまとめて用意（Google / Entra ID の SSO、WAF による IP 制限、サインアップ制御）
-- エージェントの改善はコンソールでの設定変更だけ。アプリの再デプロイなしで利用者に即反映
+- Members **without an AWS account** can use your console-built Harness agent from just a browser
+- No per-user IAM users required (AWS permissions are consolidated into a single Lambda IAM role; users are managed as Cognito users)
+- Non-functional requirements for internal distribution are included out of the box (Google / Entra ID SSO, WAF IP restriction, sign-up control)
+- Improving the agent only requires configuration changes in the console — changes reach users immediately, with no app redeploy
 
-## できること
+## Features
 
-- AgentCore Harness とのストリーミングチャット（ツール使用の可視化・モデル切替）
-- Cognito 認証（メール + パスワード / Google / Microsoft Entra ID フェデレーション）
-- SSO 専用モード（パスワードログインの無効化）
-- WAF による IP 制限（Cognito ログインの保護）
-- セルフサインアップ制御（メールドメイン制限・管理者ユーザーの自動作成）
+- Streaming chat with AgentCore Harness (tool-use visualization, model switching)
+- Cognito authentication (email + password / Google / Microsoft Entra ID federation)
+- SSO-only mode (disables password login)
+- IP restriction via WAF (protects Cognito login)
+- Self sign-up control (email domain restriction, automatic admin user creation)
 
-エージェント本体（model / system prompt / tools）は AWS コンソールの Harness 設定画面で管理します。エージェントの振る舞いを変えるためにこのテンプレートを再デプロイする必要はありません。
+The agent itself (model / system prompt / tools) is managed in the Harness settings screen of the AWS console. You never need to redeploy this template to change the agent's behavior.
 
-## アーキテクチャ
+## Architecture
 
 ```mermaid
 flowchart LR
-    User([ユーザー])
-    subgraph deploy ["Amplify Gen 2 でデプロイ"]
+    User([User])
+    subgraph deploy ["Deployed by Amplify Gen 2"]
         Hosting["Amplify Hosting<br/>(React SPA)"]
-        WAF["WAF Web ACL<br/>(IP 制限・オプション)"]
+        WAF["WAF Web ACL<br/>(IP restriction, optional)"]
         Cognito["Cognito<br/>User Pool"]
         APIGW["API Gateway<br/>REST API"]
         Lambda["Lambda<br/>harness-proxy"]
     end
-    subgraph console ["AWS コンソールで作成"]
+    subgraph console ["Created in AWS console"]
         Harness["AgentCore<br/>Harness"]
     end
 
-    User -->|ブラウザアクセス| Hosting
-    Hosting -->|"サインイン<br/>(パスワード / SSO)"| Cognito
-    WAF -.->|接続元 IP 制限| Cognito
+    User -->|Browser access| Hosting
+    Hosting -->|"Sign in<br/>(password / SSO)"| Cognito
+    WAF -.->|Source IP restriction| Cognito
     Hosting -->|"POST /invoke<br/>Bearer id_token"| APIGW
-    APIGW -->|JWT 検証| Cognito
-    APIGW -->|レスポンス<br/>ストリーミング| Lambda
-    Lambda -->|"IAM 認証<br/>InvokeHarness"| Harness
-    Harness -->|SSE ストリーム| Lambda
+    APIGW -->|JWT verification| Cognito
+    APIGW -->|Response<br/>streaming| Lambda
+    Lambda -->|"IAM auth<br/>InvokeHarness"| Harness
+    Harness -->|SSE stream| Lambda
 ```
 
-| リソース | 役割 |
+| Resource | Role |
 |---|---|
-| Cognito User Pool | ユーザー認証（SSO フェデレーション・サインアップ制御を含む） |
-| API Gateway REST | `POST /invoke`。Cognito Authorizer で JWT 検証、レスポンスストリーミング対応 |
-| Lambda harness-proxy | Harness を IAM 認証で呼び出し、SSE をそのまま透過するプロキシ |
-| WAF Web ACL（オプション） | Cognito への接続元 IP 制限 |
+| Cognito User Pool | User authentication (including SSO federation and sign-up control) |
+| API Gateway REST | `POST /invoke`. JWT verification with Cognito Authorizer, response streaming |
+| Lambda harness-proxy | Invokes the Harness with IAM auth and passes the SSE stream through |
+| WAF Web ACL (optional) | Source IP restriction for Cognito |
 
-Harness 本体は AWS コンソールで作成し、ARN を環境変数で渡します。Harness の呼び出しは Lambda の IAM ロール（`bedrock-agentcore:InvokeHarness`）で認証するため、**Harness 側に JWT Authorizer の設定は不要**です。会話のセッションは Harness が管理します。
+The Harness itself is created in the AWS console, and its ARN is passed via an environment variable. Harness invocation is authenticated by the Lambda IAM role (`bedrock-agentcore:InvokeHarness`), so **no JWT Authorizer configuration is needed on the Harness side**. Conversation sessions are managed by the Harness.
 
-## ディレクトリ構成
+## Directory structure
 
 ```
-├── amplify/                      # Amplify Gen 2 バックエンド定義
-│   ├── backend.ts                # API Gateway + Lambda + WAF などの CDK 配線
-│   ├── parameters.ts             # デプロイパラメータ（環境変数で制御）
-│   ├── auth/resource.ts          # Cognito（defineAuth・SSO・サインアップトリガー）
+├── amplify/                      # Amplify Gen 2 backend definition
+│   ├── backend.ts                # CDK wiring for API Gateway + Lambda + WAF, etc.
+│   ├── parameters.ts             # Deploy parameters (controlled via environment variables)
+│   ├── auth/resource.ts          # Cognito (defineAuth, SSO, sign-up trigger)
 │   └── functions/
-│       ├── harness-proxy/        # ストリーミングプロキシ Lambda（Node.js 22）
-│       └── pre-sign-up/          # メールドメイン制限トリガー
-├── src/                          # React フロントエンド
-│   ├── components/               # AuthGate, ChatMessage, ChatInput, ModelSelector など
+│       ├── harness-proxy/        # Streaming proxy Lambda (Node.js 22)
+│       └── pre-sign-up/          # Email domain restriction trigger
+├── src/                          # React frontend
+│   ├── components/               # AuthGate, ChatMessage, ChatInput, ModelSelector, etc.
 │   ├── hooks/                    # useChat, useTheme
-│   ├── lib/                      # Harness クライアント・SSE パーサ・モデル定義
-│   └── dev/                      # デザインプレビュー用モックデータ
-└── docs/                         # セットアップ手順書
+│   ├── lib/                      # Harness client, SSE parser, model definitions
+│   └── dev/                      # Mock data for design preview
+└── docs/                         # Setup guides (Japanese)
 ```
 
-## 事前準備
+## Prerequisites
 
-- Node.js 24 以上
-- AWS CLI（認証情報設定済み）
-- AgentCore Harness が利用できるリージョン（例: `us-east-1`）
+- Node.js 24 or later
+- AWS CLI (with credentials configured)
+- A region where AgentCore Harness is available (e.g. `us-east-1`)
 
-## セットアップ
+## Setup
 
-### 1. Harness を作成する
+### 1. Create a Harness
 
-AWS コンソールで Harness を作成し、ARN を取得します。手順は [docs/Harnessのセットアップ.md](docs/Harnessのセットアップ.md) を参照してください。
+Create a Harness in the AWS console and note its ARN. See [docs/Harnessのセットアップ.md](docs/Harnessのセットアップ.md) (Japanese) for the steps.
 
-### 2. デプロイする
+### 2. Deploy
 
 ```bash
 npm install
@@ -108,133 +110,133 @@ ADMIN_USER_EMAIL=you@example.com \
   npx ampx sandbox --once
 ```
 
-- `HARNESS_ARN` は必須です。未設定の場合、synth 時にエラーになります
-- セルフサインアップはデフォルト無効のため、`ADMIN_USER_EMAIL` を設定すると最初のユーザーが作成され、仮パスワードがメールで届きます
+- `HARNESS_ARN` is required. If unset, synth fails with an error
+- Self sign-up is disabled by default, so setting `ADMIN_USER_EMAIL` creates the first user and sends a temporary password by email
 
-デプロイが完了すると `amplify_outputs.json` が生成され、フロントエンドは API URL や Cognito 設定をこのファイルから自動的に読み取ります。
+Once the deploy completes, `amplify_outputs.json` is generated, and the frontend automatically reads the API URL and Cognito settings from it.
 
-### 3. 開発サーバーを起動する
+### 3. Start the dev server
 
 ```bash
 npm run dev
 ```
 
-`http://localhost:5173` を開き、仮パスワードでログイン（初回にパスワード変更）するとチャットを試せます。
+Open `http://localhost:5173`, log in with the temporary password (you will change it on first login), and try the chat.
 
-## 本番デプロイ（Amplify Hosting）
+## Production deploy (Amplify Hosting)
 
-sandbox とは別に、Git 連携による本番環境を作る手順です。リージョンは Harness に合わせます（例: `us-east-1`）。
+Separately from the sandbox, these are the steps to create a Git-connected production environment. Match the region to your Harness (e.g. `us-east-1`).
 
-### 1. リポジトリを用意する
+### 1. Prepare a repository
 
-このリポジトリを fork するか、自分の GitHub リポジトリへ push します。
+Fork this repository, or push it to your own GitHub repository.
 
-### 2. Amplify アプリを作成する
+### 2. Create an Amplify app
 
-1. [Amplify コンソール](https://console.aws.amazon.com/amplify/)で「新しいアプリを作成」→「GitHub」を選択します
-2. GitHub の認可画面で、対象リポジトリへのアクセスを許可します
-3. リポジトリとブランチ（例: `main`）を選択します。Amplify Gen 2 プロジェクトとして自動検出され、ビルド設定は自動生成されます
-4. バックエンドのデプロイに使う**サービスロール**の作成を求められたら、案内に従って作成します
+1. In the [Amplify console](https://console.aws.amazon.com/amplify/), choose "Create new app" → "GitHub"
+2. On the GitHub authorization screen, grant access to the target repository
+3. Select the repository and branch (e.g. `main`). It is auto-detected as an Amplify Gen 2 project and the build settings are generated automatically
+4. If prompted to create a **service role** for the backend deploy, follow the instructions to create one
 
-### 3. 環境変数を設定する（初回デプロイ前に）
+### 3. Set environment variables (before the first deploy)
 
-アプリ設定 →「環境変数」に設定します。**`HARNESS_ARN` を設定しないままビルドすると synth エラーで失敗する**ので、初回デプロイの開始前に設定してください。
+Set them under App settings → "Environment variables". **Building without `HARNESS_ARN` fails with a synth error**, so set it before starting the first deploy.
 
-| キー | 必須 | 値 |
+| Key | Required | Value |
 |---|---|---|
-| `HARNESS_ARN` | ✅ | Harness の ARN |
-| `ADMIN_USER_EMAIL` | 推奨 | 最初のログインユーザー（仮パスワードがメールで届く） |
-| その他 | 任意 | [オプション機能](#オプション機能)の各環境変数 |
+| `HARNESS_ARN` | ✅ | The Harness ARN |
+| `ADMIN_USER_EMAIL` | Recommended | The first login user (a temporary password is emailed) |
+| Others | Optional | Environment variables for the [optional features](#optional-features) |
 
-SSO を使う場合は、アプリ設定 →「シークレット」に `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET`（Entra ID なら `ENTRA_CLIENT_ID` / `ENTRA_CLIENT_SECRET`）も設定します。
+If you use SSO, also set `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` (or `ENTRA_CLIENT_ID` / `ENTRA_CLIENT_SECRET` for Entra ID) under App settings → "Secrets".
 
-> sandbox の `ampx sandbox secret set` とは別管理です。本番用にここで改めて設定してください。
+> These are managed separately from the sandbox's `ampx sandbox secret set`. Set them again here for production.
 
-### 4. 初回デプロイ → APP_ORIGINS を反映する
+### 4. First deploy → apply APP_ORIGINS
 
-アプリの URL は初回デプロイ後に発行されるため、2 段階になります。
+The app URL is issued after the first deploy, so this is a two-step process.
 
-1. 初回デプロイの完了後、発行された URL（`https://main.xxxxxxxx.amplifyapp.com`）を確認します
-2. 環境変数 `APP_ORIGINS` にその URL を設定し、**再デプロイ**します（最新ビルドの「このバージョンを再デプロイ」で OK）
+1. After the first deploy completes, note the issued URL (`https://main.xxxxxxxx.amplifyapp.com`)
+2. Set the environment variable `APP_ORIGINS` to that URL and **redeploy** ("Redeploy this version" on the latest build is fine)
 
-これで CORS 許可と Cognito のコールバック URL に本番 URL が反映されます。**この手順を飛ばすと、画面は開けてもチャット送信が CORS エラーになります。**
+This applies the production URL to the CORS allowlist and the Cognito callback URLs. **If you skip this step, the page loads but chat requests fail with CORS errors.**
 
-### 5. SSO のリダイレクト URI を登録する（SSO を使う場合のみ）
+### 5. Register SSO redirect URIs (only if using SSO)
 
-本番は sandbox とは**別の Cognito User Pool・別ドメイン**が作られます。Cognito コンソールで本番 User Pool のドメイン（`xxxxxxxx.auth.<region>.amazoncognito.com`）を確認し、Google / Entra ID 側に `https://<本番ドメイン>/oauth2/idpresponse` を**追加**登録してください。sandbox 用に登録した URI は残したままで共存できます。
+Production gets a **separate Cognito User Pool and domain** from the sandbox. Check the production User Pool domain (`xxxxxxxx.auth.<region>.amazoncognito.com`) in the Cognito console, and **add** `https://<production-domain>/oauth2/idpresponse` on the Google / Entra ID side. The URIs registered for the sandbox can coexist — leave them as they are.
 
-### 6. 動作確認
+### 6. Verify
 
-発行された URL を開き、`ADMIN_USER_EMAIL` に届いた仮パスワードでログイン（初回にパスワード変更）してチャットを送信します。以後、`main` ブランチへの push で自動的に再デプロイされます（フルスタックビルドのため 10 分前後かかります）。
+Open the issued URL, log in with the temporary password sent to `ADMIN_USER_EMAIL` (you will change it on first login), and send a chat message. From then on, pushes to the `main` branch trigger automatic redeploys (a full-stack build takes around 10 minutes).
 
-## オプション機能
+## Optional features
 
-すべて環境変数で制御します。パラメータの一覧と説明は [amplify/parameters.ts](amplify/parameters.ts) を参照してください。
+Everything is controlled via environment variables. See [amplify/parameters.ts](amplify/parameters.ts) for the full list of parameters with descriptions.
 
-自分の環境専用にデプロイする場合は、環境変数の代わりに `amplify/parameters.ts` の値を直接書き換えても構いません（例: `selfSignUp: true`）。環境変数の設定漏れがなくなり、設定がコードとして残ります。ただし Harness の ARN やテナント ID などアカウント固有の情報を書いた場合は、そのままパブリックリポジトリへコミットしないよう注意してください。
+If you deploy for your own environment only, you can also edit the values in `amplify/parameters.ts` directly instead of using environment variables (e.g. `selfSignUp: true`). This avoids missing environment variable configuration and keeps the settings in code. However, if you write account-specific information such as the Harness ARN or a tenant ID, be careful not to commit it to a public repository.
 
-| 機能 | 環境変数 | 備考 |
+| Feature | Environment variable | Notes |
 |------|---------|------|
-| 管理ユーザー作成 | `ADMIN_USER_EMAIL=admin@example.com` | デプロイ時にユーザーを作成し、仮パスワードをメール送付。セルフサインアップ無効時の初回ログイン手段 |
-| セルフサインアップ | `SELF_SIGNUP=true` | デフォルトは無効（管理者によるユーザー作成のみ） |
-| メールドメイン制限 | `ALLOWED_EMAIL_DOMAINS=example.com,example.co.jp` | セルフサインアップと SSO の初回サインインの両方に適用 |
-| Google SSO | `GOOGLE_AUTH=true` | 手順: [docs/Google_SSOの設定.md](docs/Google_SSOの設定.md) |
-| Entra ID SSO | `ENTRA_AUTH=true` `ENTRA_TENANT_ID=<tenant-id>` | 手順: [docs/EntraID_SSOの設定.md](docs/EntraID_SSOの設定.md) |
-| SSO 専用モード | `SSO_ONLY=true` | パスワードログインを無効化。`GOOGLE_AUTH` または `ENTRA_AUTH` が必要 |
-| WAF IP 制限 | `ALLOWED_IPV4_CIDRS=203.0.113.0/24` | 手順: [docs/WAFによるIP制限.md](docs/WAFによるIP制限.md)。未指定なら WAF を作成しない |
-| CORS 許可オリジン | `APP_ORIGINS=http://localhost:5173,https://example.com` | デフォルトは `http://localhost:5173` |
+| Admin user creation | `ADMIN_USER_EMAIL=admin@example.com` | Creates a user at deploy time and emails a temporary password. The initial login method when self sign-up is disabled |
+| Self sign-up | `SELF_SIGNUP=true` | Disabled by default (users are created by an administrator only) |
+| Email domain restriction | `ALLOWED_EMAIL_DOMAINS=example.com,example.co.jp` | Applies to both self sign-up and the first SSO sign-in |
+| Google SSO | `GOOGLE_AUTH=true` | Guide: [docs/Google_SSOの設定.md](docs/Google_SSOの設定.md) (Japanese) |
+| Entra ID SSO | `ENTRA_AUTH=true` `ENTRA_TENANT_ID=<tenant-id>` | Guide: [docs/EntraID_SSOの設定.md](docs/EntraID_SSOの設定.md) (Japanese) |
+| SSO-only mode | `SSO_ONLY=true` | Disables password login. Requires `GOOGLE_AUTH` or `ENTRA_AUTH` |
+| WAF IP restriction | `ALLOWED_IPV4_CIDRS=203.0.113.0/24` | Guide: [docs/WAFによるIP制限.md](docs/WAFによるIP制限.md) (Japanese). If unset, no WAF is created |
+| CORS allowed origins | `APP_ORIGINS=http://localhost:5173,https://example.com` | Defaults to `http://localhost:5173` |
 
-> **Google SSO を使う場合の注意**: Cognito のフェデレーションは初回サインイン時にユーザーを自動作成するため、既定では**任意の Google アカウント**でサインインできます。組織内に限定するには `ALLOWED_EMAIL_DOMAINS` を併せて設定してください（Entra ID はシングルテナント構成のため、自テナントのメンバーに限定されます）。
+> **Note on Google SSO**: Cognito federation auto-creates users on their first sign-in, so by default **any Google account** can sign in. To restrict to your organization, also set `ALLOWED_EMAIL_DOMAINS` (Entra ID is a single-tenant configuration, so it is already restricted to members of your tenant).
 
-## モデルセレクタの仕組み
+## How the model selector works
 
-ヘッダーのモデルセレクタで選んだモデルは、リクエストの `modelId` として Lambda プロキシに渡り、Harness のデフォルトモデルを会話単位で上書きします。「エージェント既定」を選ぶと `modelId` を送らず、Harness に設定されたモデルが使われます。クロスリージョン推論のプレフィックス（`us.` / `jp.`）は Lambda が自動付与するため、フロントエンドはリージョンを意識しません。選択は localStorage に保存されます。
+The model selected in the header's model selector is passed to the Lambda proxy as `modelId` in the request, overriding the Harness's default model per conversation. Selecting "Agent default" sends no `modelId`, so the model configured on the Harness is used. The cross-region inference prefix (`us.` / `jp.`) is added automatically by the Lambda, so the frontend does not need to be region-aware. The selection is saved in localStorage.
 
-## コスト概算
+## Cost estimate
 
-主要コストは Bedrock のモデル推論（トークン従量）と AgentCore の従量課金で、利用量に比例します。テンプレートが作るインフラ自体はほぼ従量課金で、小規模利用なら数ドル/月程度です。
+The dominant costs are Bedrock model inference (per-token) and AgentCore usage-based charges, both proportional to usage. The infrastructure created by this template is almost entirely pay-per-use — a few dollars per month for small-scale usage.
 
-| リソース | 目安 |
+| Resource | Estimate |
 |---|---|
-| Bedrock モデル推論 / AgentCore Harness | 利用量に比例（支配的なコスト）。[Bedrock の料金](https://aws.amazon.com/bedrock/pricing/)を参照 |
-| Cognito | 無料枠 10,000 MAU（Essentials ティア） |
-| API Gateway REST | $3.50/100 万リクエスト |
-| Lambda | ストリーミング中は実行時間課金が続く（応答 1 分 × ARM 128MB ≒ $0.0001/回） |
-| Amplify Hosting | ビルド $0.01/分、配信 $0.15/GB |
-| WAF（有効時のみ） | 約 $6〜7/月の固定費 |
+| Bedrock model inference / AgentCore Harness | Proportional to usage (the dominant cost). See [Bedrock pricing](https://aws.amazon.com/bedrock/pricing/) |
+| Cognito | Free tier of 10,000 MAU (Essentials tier) |
+| API Gateway REST | $3.50 per million requests |
+| Lambda | Execution-time billing continues while streaming (1-minute response × ARM 128MB ≒ $0.0001 per invocation) |
+| Amplify Hosting | Build $0.01/min, serving $0.15/GB |
+| WAF (only when enabled) | Fixed cost of about $6–7/month |
 
-## トラブルシューティング
+## Troubleshooting
 
-### `HARNESS_ARN が設定されていません` で synth が失敗する
+### Synth fails with `HARNESS_ARN が設定されていません` (HARNESS_ARN is not set)
 
-環境変数 `HARNESS_ARN` を設定して再実行してください。Harness の作成手順は [docs/Harnessのセットアップ.md](docs/Harnessのセットアップ.md) を参照してください。
+Set the `HARNESS_ARN` environment variable and run again. See [docs/Harnessのセットアップ.md](docs/Harnessのセットアップ.md) (Japanese) for how to create a Harness.
 
-### ブラウザで CORS エラーになる
+### CORS errors in the browser
 
-ブラウザで開いているオリジンと `APP_ORIGINS` が**ポート番号まで完全一致**している必要があります。開発サーバーは `5173` に固定しています（使用中の場合は起動エラーになるので、占有しているプロセスを止めてください）。本番 URL を追加した場合は再デプロイが必要です。
+The origin open in the browser must match `APP_ORIGINS` **exactly, including the port number**. The dev server is pinned to port `5173` (if the port is in use, startup fails — stop the process occupying it). If you added a production URL, a redeploy is required.
 
-### `Failed to retrieve backend secret` でデプロイが失敗する
+### Deploy fails with `Failed to retrieve backend secret`
 
-SSO フラグを有効にしたのに secret が未設定です。`npx ampx sandbox secret set GOOGLE_CLIENT_ID` などで設定してください（[docs/Google_SSOの設定.md](docs/Google_SSOの設定.md) / [docs/EntraID_SSOの設定.md](docs/EntraID_SSOの設定.md)）。
+An SSO flag is enabled but the secret is not set. Set it with `npx ampx sandbox secret set GOOGLE_CLIENT_ID` etc. ([docs/Google_SSOの設定.md](docs/Google_SSOの設定.md) / [docs/EntraID_SSOの設定.md](docs/EntraID_SSOの設定.md), Japanese).
 
-### モデルエラー（`on-demand throughput isn't supported`）
+### Model error (`on-demand throughput isn't supported`)
 
-Lambda プロキシがモデル ID にリージョンプレフィックスを自動付与しますが、選択肢にないカスタムモデル ID を使う場合は完全修飾 ID（例: `us.anthropic.claude-sonnet-4-5-20250929-v1:0`）を指定してください。
+The Lambda proxy adds the region prefix to model IDs automatically, but if you use a custom model ID that is not among the presets, specify the fully qualified ID (e.g. `us.anthropic.claude-sonnet-4-5-20250929-v1:0`).
 
-### チャットが応答しない
+### Chat does not respond
 
-1. AWS コンソールで Harness のステータスが ACTIVE であることを確認します
-2. ブラウザの開発者ツール → Network タブで `/invoke` のレスポンスを確認します（401 ならトークン期限切れの可能性。再ログインしてください）
-3. CloudWatch Logs で harness-proxy Lambda のログを確認します
+1. Confirm the Harness status is ACTIVE in the AWS console
+2. Check the `/invoke` response in the browser dev tools → Network tab (a 401 may mean the token expired — log in again)
+3. Check the harness-proxy Lambda logs in CloudWatch Logs
 
-### SSO でログインできない
+### Cannot log in with SSO
 
-[docs/Google_SSOの設定.md](docs/Google_SSOの設定.md) / [docs/EntraID_SSOの設定.md](docs/EntraID_SSOの設定.md) 末尾のトラブルシューティングを参照してください。Entra ID は ID トークンの email クレーム設定が漏れがちです。
+See the troubleshooting sections at the end of [docs/Google_SSOの設定.md](docs/Google_SSOの設定.md) / [docs/EntraID_SSOの設定.md](docs/EntraID_SSOの設定.md) (Japanese). For Entra ID, the email claim configuration on the ID token is commonly missed.
 
-## デザインプレビュー（バックエンド不要）
+## Design preview (no backend required)
 
-開発サーバー起動後、`http://localhost:5173/?preview` を開くと認証・バックエンドなしでモック会話を使った UI 確認ができます（`?preview&theme=dark` でダークテーマ）。開発ビルド限定の機能です。
+After starting the dev server, open `http://localhost:5173/?preview` to check the UI with mock conversations, without authentication or a backend (`?preview&theme=dark` for the dark theme). Available in development builds only.
 
-## ライセンス
+## License
 
 [MIT](LICENSE)
