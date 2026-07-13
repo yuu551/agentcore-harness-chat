@@ -69,7 +69,38 @@ ALLOWED_EMAIL_DOMAINS=example.com GOOGLE_AUTH=true HARNESS_ARN=arn:... npx ampx 
 GOOGLE_AUTH=true SSO_ONLY=true HARNESS_ARN=arn:... npx ampx sandbox --once
 ```
 
-## 本番デプロイ時の注意
+## 本番デプロイ（Amplify Hosting）での設定
 
-- Amplify Hosting でのブランチデプロイでは、シークレットは Amplify コンソールの「Secrets」（Hosting → Secrets management）に同名キーで設定します
-- 本番 URL を `APP_ORIGINS` に追加すると、Cognito のコールバック URL にも自動反映されます
+ここまでの手順は sandbox 前提です。Amplify Hosting の Git 連携で本番環境を作って配布する場合は、環境変数・シークレットを Amplify コンソールで設定します。本番は sandbox とは**別の Cognito User Pool・別の Cognito ドメイン**が作られるため、Google 側へのリダイレクト URI 登録も本番用に追加で必要です。
+
+### 1. 環境変数を設定する
+
+Amplify コンソールでアプリを開き、「ホスティング」→「環境変数」に以下を設定します。
+
+| 環境変数 | 値 |
+|---|---|
+| `HARNESS_ARN` | Harness の ARN |
+| `GOOGLE_AUTH` | `true` |
+| `APP_ORIGINS` | 本番アプリの URL（初回デプロイ後に設定） |
+
+### 2. シークレットを設定する
+
+「ホスティング」→「シークレット」（Secrets management）に、sandbox のときと同名のキーで設定します。`ampx sandbox secret set` で登録した値はブランチデプロイには引き継がれないため、コンソールでの設定が必須です。
+
+| シークレット | 値 |
+|---|---|
+| `GOOGLE_CLIENT_ID` | OAuth クライアント ID |
+| `GOOGLE_CLIENT_SECRET` | OAuth クライアントシークレット |
+
+設定後、対象ブランチを再デプロイします。
+
+### 3. 本番の Cognito ドメインを Google 側に登録する
+
+デプロイ完了後、Cognito コンソールで本番用 User Pool（Amplify アプリ名・ブランチ名を含む方）を開き、「ドメイン」から本番の Cognito ドメインを確認します。Google Cloud の OAuth クライアント設定に、sandbox 用とは別にもう 1 組追加します。
+
+- **承認済みの JavaScript 生成元**: `https://<本番 Cognito ドメイン>`
+- **承認済みのリダイレクト URI**: `https://<本番 Cognito ドメイン>/oauth2/idpresponse`
+
+### 4. APP_ORIGINS を設定して再デプロイする
+
+発行された本番アプリの URL（例: `https://main.xxxxxxxx.amplifyapp.com`）を環境変数 `APP_ORIGINS` に設定して再デプロイします。これで API の CORS 許可と Cognito のコールバック / ログアウト URL に本番 URL が反映され、Google サインイン後にアプリへ正しく戻れるようになります。
