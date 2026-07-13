@@ -37,29 +37,7 @@ AgentCore Harness を使うと、コンソール上で model / system prompt / t
 
 ## アーキテクチャ
 
-```mermaid
-flowchart LR
-    User([ユーザー])
-    subgraph deploy ["Amplify Gen 2 でデプロイ"]
-        Hosting["Amplify Hosting<br/>(React SPA)"]
-        WAF["WAF Web ACL<br/>(IP 制限・オプション)"]
-        Cognito["Cognito<br/>User Pool"]
-        APIGW["API Gateway<br/>REST API"]
-        Lambda["Lambda<br/>harness-proxy"]
-    end
-    subgraph console ["AWS コンソールで作成"]
-        Harness["AgentCore<br/>Harness"]
-    end
-
-    User -->|ブラウザアクセス| Hosting
-    Hosting -->|"サインイン<br/>(パスワード / SSO)"| Cognito
-    WAF -.->|接続元 IP 制限| Cognito
-    Hosting -->|"POST /invoke<br/>Bearer id_token"| APIGW
-    APIGW -->|JWT 検証| Cognito
-    APIGW -->|レスポンス<br/>ストリーミング| Lambda
-    Lambda -->|"IAM 認証<br/>InvokeHarness"| Harness
-    Harness -->|SSE ストリーム| Lambda
-```
+![構成図](docs/architecture.png)
 
 | リソース | 役割 |
 |---|---|

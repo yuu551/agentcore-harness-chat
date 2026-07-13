@@ -37,29 +37,7 @@ The agent itself (model / system prompt / tools) is managed in the Harness setti
 
 ## Architecture
 
-```mermaid
-flowchart LR
-    User([User])
-    subgraph deploy ["Deployed by Amplify Gen 2"]
-        Hosting["Amplify Hosting<br/>(React SPA)"]
-        WAF["WAF Web ACL<br/>(IP restriction, optional)"]
-        Cognito["Cognito<br/>User Pool"]
-        APIGW["API Gateway<br/>REST API"]
-        Lambda["Lambda<br/>harness-proxy"]
-    end
-    subgraph console ["Created in AWS console"]
-        Harness["AgentCore<br/>Harness"]
-    end
-
-    User -->|Browser access| Hosting
-    Hosting -->|"Sign in<br/>(password / SSO)"| Cognito
-    WAF -.->|Source IP restriction| Cognito
-    Hosting -->|"POST /invoke<br/>Bearer id_token"| APIGW
-    APIGW -->|JWT verification| Cognito
-    APIGW -->|Response<br/>streaming| Lambda
-    Lambda -->|"IAM auth<br/>InvokeHarness"| Harness
-    Harness -->|SSE stream| Lambda
-```
+![Architecture diagram](docs/architecture.png)
 
 | Resource | Role |
 |---|---|
